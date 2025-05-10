@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSim Thumbnail Generator</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            display: none;
+        }
+        .image-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .code-container {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            position: relative;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+            font-family: monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #333;
+            color: white;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .status-panel {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .is-automated .status-panel {
+            background-color: #ffecb3;
+        }
+        .is-human .status-panel {
+            background-color: #e7f0fd;
+        }
+        .puppeteer-only {
+            display: none;
+        }
+        .is-automated .puppeteer-only {
+            display: block;
+        }
+        .human-only {
+            display: block;
+        }
+        .is-automated .human-only {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSim Thumbnail Generator</h1>
+        
+        <div class="puppeteer-only">
+            <div class="image-container">
+                <img id="thumbnail-image" src="" alt="Generated Thumbnail">
+            </div>
+        </div>
+        
+        <div class="human-only">
+            <div class="form-group">
+                <label for="image-prompt">Enter image description:</label>
+                <textarea id="image-prompt" placeholder="Describe the image you want to generate..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <button id="generate-btn">Generate Thumbnail</button>
+            </div>
+            
+            <div class="result" id="result-container">
+                <div class="image-container">
+                    <img id="thumbnail-image" src="" alt="Generated Thumbnail">
+                </div>
+                
+                <div class="code-container">
+                    <button class="copy-btn" id="copy-btn">Copy</button>
+                    <pre id="code-output"></pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-panel" id="status">
+            Detecting browser...
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            const statusElement = document.getElementById('status');
+            const generateBtn = document.getElementById('generate-btn');
+            const imagePrompt = document.getElementById('image-prompt');
+            const resultContainer = document.getElementById('result-container');
+            const thumbnailImage = document.getElementById('thumbnail-image');
+            const codeOutput = document.getElementById('code-output');
+            const copyBtn = document.getElementById('copy-btn');
+            
+            // Check for navigator.webdriver property
+            if (navigator.webdriver) {
+                body.classList.add('is-automated');
+                statusElement.textContent = "Automated browser detected (Puppeteer).";
+                console.log("navigator.webdriver is true - detected automated browser.");
+                
+                // Get the URL parameters (if any)
+                const urlParams = new URLSearchParams(window.location.search);
+                const imageUrl = urlParams.get('imageUrl');
+                
+                if (imageUrl) {
+                    thumbnailImage.src = imageUrl;
+                } else {
+                    statusElement.textContent = "Error: No image URL provided in query parameters.";
+                }
+            } else {
+                body.classList.add('is-human');
+                statusElement.textContent = "Human browser detected. Generate a thumbnail below.";
+                console.log("navigator.webdriver is false - detected human browser.");
+                
+                // Set up event listeners for human interaction
+                generateBtn.addEventListener('click', generateThumbnail);
+                copyBtn.addEventListener('click', copyCodeToClipboard);
+            }
+            
+            function generateThumbnail() {
+                const prompt = imagePrompt.value.trim();
+                if (!prompt) {
+                    alert("Please enter an image description.");
+                    return;
+                }
+                
+                // Show loading state
+                generateBtn.textContent = "Generating...";
+                generateBtn.disabled = true;
+                
+                // Call image generation API
+                generateImage(prompt)
+                    .then(imageUrl => {
+                        // Display the image
+                        thumbnailImage.src = imageUrl;
+                        
+                        // Generate and display the code
+                        const code = generateCode(imageUrl);
+                        codeOutput.textContent = code;
+                        
+                        // Show the result container
+                        resultContainer.style.display = 'block';
+                        
+                        // Reset button
+                        generateBtn.textContent = "Generate Thumbnail";
+                        generateBtn.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error("Error generating image:", error);
+                        alert("Failed to generate image. Please try again.");
+                        generateBtn.textContent = "Generate Thumbnail";
+                        generateBtn.disabled = false;
+                    });
+            }
+            
+            function generateImage(prompt) {
+                // For this demo, we'll use a placeholder image service
+                // In a real implementation, you would call an actual image generation API
+                const encodedPrompt = encodeURIComponent(prompt);
+                const imageUrl = `https://source.unsplash.com/random/800x600?${encodedPrompt}`;
+                
+                return new Promise((resolve) => {
+                    // Simulate API call delay
+                    setTimeout(() => {
+                        resolve(imageUrl);
+                    }, 1500);
+                });
+            }
+            
+            function generateCode(imageUrl) {
+                return `// WebSim Thumbnail Generator
+// Generated thumbnail URL: ${imageUrl}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Project Title</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Thumbnail for automated browsers -->
+    <div id="thumbnail-container" class="hidden">
+        <img src="${imageUrl}" alt="Thumbnail" />
+    </div>
+    
+    <!-- Actual content for human users -->
+    <div id="content-container" class="content">
+        <h1>Your Project Content Here</h1>
+        <!-- Your actual project content goes here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const thumbnailContainer = document.getElementById('thumbnail-container');
+            const contentContainer = document.getElementById('content-container');
+            
+            // Check if this is an automated browser
+            if (navigator.webdriver) {
+                // Show only the thumbnail for puppeteer/automated browsers
+                thumbnailContainer.classList.remove('hidden');
+                contentContainer.classList.add('hidden');
+                console.log("Automated browser detected - showing thumbnail only");
+            } else {
+                // Show the actual content for human users
+                thumbnailContainer.classList.add('hidden');
+                contentContainer.classList.remove('hidden');
+                console.log("Human browser detected - showing full content");
+                
+                // Initialize your project code here
+                // ...
+            }
+        });
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>`;
+            }
+            
+            function copyCodeToClipboard() {
+                const codeText = codeOutput.textContent;
+                
+                navigator.clipboard.writeText(codeText)
+                    .then(() => {
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = "Copied!";
+                        setTimeout(() => {
+                            copyBtn.textContent = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                        alert("Failed to copy to clipboard. Please try again.");
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
+
