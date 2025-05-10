@@ -150,7 +150,7 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             const body = document.body;
             const statusElement = document.getElementById('status');
             const generateBtn = document.getElementById('generate-btn');
@@ -198,7 +198,7 @@
                 
                 // Call image generation API
                 generateImage(prompt)
-                    .then(imageUrl => {
+                    .then(function(imageUrl) {
                         // Display the image
                         thumbnailImage.src = imageUrl;
                         
@@ -213,7 +213,7 @@
                         generateBtn.textContent = "Generate Thumbnail";
                         generateBtn.disabled = false;
                     })
-                    .catch(error => {
+                    .catch(function(error) {
                         console.error("Error generating image:", error);
                         alert("Failed to generate image. Please try again.");
                         generateBtn.textContent = "Generate Thumbnail";
@@ -227,9 +227,9 @@
                 const encodedPrompt = encodeURIComponent(prompt);
                 const imageUrl = `https://source.unsplash.com/random/800x600?${encodedPrompt}`;
                 
-                return new Promise((resolve) => {
+                return new Promise(function(resolve) {
                     // Simulate API call delay
-                    setTimeout(() => {
+                    setTimeout(function() {
                         resolve(imageUrl);
                     }, 1500);
                 });
@@ -273,7 +273,7 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             const thumbnailContainer = document.getElementById('thumbnail-container');
             const contentContainer = document.getElementById('content-container');
             
@@ -303,14 +303,14 @@
                 const codeText = codeOutput.textContent;
                 
                 navigator.clipboard.writeText(codeText)
-                    .then(() => {
+                    .then(function() {
                         const originalText = copyBtn.textContent;
                         copyBtn.textContent = "Copied!";
-                        setTimeout(() => {
+                        setTimeout(function() {
                             copyBtn.textContent = originalText;
                         }, 2000);
                     })
-                    .catch(err => {
+                    .catch(function(err) {
                         console.error('Failed to copy: ', err);
                         alert("Failed to copy to clipboard. Please try again.");
                     });
